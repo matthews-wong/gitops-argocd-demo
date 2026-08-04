@@ -28,5 +28,8 @@ jobs:
       - name: Build dev overlay
         run: kustomize build workloads/sample-app/overlays/dev
 
+      - name: Build staging overlay
+        run: kustomize build workloads/sample-app/overlays/staging
+
       - name: Build prod overlay
         run: kustomize build workloads/sample-app/overlays/prod

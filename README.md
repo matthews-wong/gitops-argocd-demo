@@ -44,12 +44,16 @@ flowchart TD
     Repo -->|watches & syncs| Argo["Argo CD\n(in-cluster controller)"]
     Argo -->|apply| Root["Root Application\n(app of apps)"]
     Root --> AppDev["Application: sample-app-dev"]
+    Root --> AppStaging["Application: sample-app-staging"]
     Root --> AppProd["Application: sample-app-prod"]
     AppDev -->|kustomize build| OverlayDev["overlays/dev\n(base + dev patch)"]
+    AppStaging -->|kustomize build| OverlayStaging["overlays/staging\n(base + staging patch)"]
     AppProd -->|kustomize build| OverlayProd["overlays/prod\n(base + prod patch)"]
     OverlayDev --> NsDev["Namespace: sample-app-dev"]
+    OverlayStaging --> NsStaging["Namespace: sample-app-staging"]
     OverlayProd --> NsProd["Namespace: sample-app-prod"]
     NsDev --> Cluster["Kubernetes cluster"]
+    NsStaging --> Cluster
     NsProd --> Cluster
 ```
 
@@ -62,6 +66,7 @@ gitops-argocd-demo/
 │   │   └── root-app.yaml              # Root Application → watches apps/applications/
 │   └── applications/                  # One Argo CD Application per environment
 │       ├── sample-app-dev.yaml        #   → workloads/sample-app/overlays/dev
+│       ├── sample-app-staging.yaml    #   → workloads/sample-app/overlays/staging
 │       └── sample-app-prod.yaml       #   → workloads/sample-app/overlays/prod
 │
 ├── argocd/                            # Argo CD platform config (applied once)
@@ -79,6 +84,9 @@ gitops-argocd-demo/
 │       └── overlays/                  # Per-environment specialisation (the "where/how much")
 │           ├── dev/
 │           │   ├── kustomization.yaml # namespace, 1 replica, small resources, image tag
+│           │   └── patch-deployment.yaml
+│           ├── staging/
+│           │   ├── kustomization.yaml # namespace, 2 replicas, mid resources, pinned tag
 │           │   └── patch-deployment.yaml
 │           └── prod/
 │               ├── kustomization.yaml # namespace, 3 replicas, larger resources, pinned tag
@@ -150,23 +158,30 @@ kubectl apply -f argocd/projects/appproject.yaml
 kubectl apply -f apps/argocd/root-app.yaml
 ```
 
-Argo CD reconciles the root Application, which creates `sample-app-dev` and
-`sample-app-prod`, which in turn deploy the dev and prod overlays into their
-namespaces.
+Argo CD reconciles the root Application, which creates `sample-app-dev`,
+`sample-app-staging` and `sample-app-prod`, which in turn deploy the dev,
+staging and prod overlays into their namespaces.
 
 ## Environments
 
-| Aspect        | dev (`sample-app-dev`)      | prod (`sample-app-prod`)          |
-| ------------- | --------------------------- | --------------------------------- |
-| Namespace     | `sample-app-dev`            | `sample-app-prod`                 |
-| Replicas      | 1                           | 3                                 |
-| CPU request   | 25m                         | 100m                              |
-| Memory limit  | 128Mi                       | 256Mi                             |
-| Image tag     | `latest` (mutable)          | `plain-text` (pinned)             |
-| Auto-prune    | on                          | off (manual, safer for prod)      |
-| Self-heal     | on                          | on                                |
+| Aspect        | dev (`sample-app-dev`)      | staging (`sample-app-staging`)    | prod (`sample-app-prod`)          |
+| ------------- | --------------------------- | --------------------------------- | --------------------------------- |
+| Namespace     | `sample-app-dev`            | `sample-app-staging`              | `sample-app-prod`                 |
+| Replicas      | 1                           | 2                                 | 3                                 |
+| CPU request   | 25m                         | 50m                               | 100m                              |
+| Memory limit  | 128Mi                       | 192Mi                             | 256Mi                             |
+| Image tag     | `latest` (mutable)          | `plain-text` (pinned)             | `plain-text` (pinned)             |
+| Auto-prune    | on                          | on                                | off (manual, safer for prod)      |
+| Self-heal     | on                          | on                                | on                                |
 
-All other configuration is inherited unchanged from `workloads/sample-app/base/`.
+Staging sits between dev and prod: it runs more than one replica and pins the
+same immutable image tag prod will promote, so a release candidate is exercised
+under prod-like conditions before it ships. All other configuration is
+inherited unchanged from `workloads/sample-app/base/`.
+
+Every Application also retries failed syncs with exponential backoff, and prod
+ignores drift on the Deployment's replica count so a future
+HorizontalPodAutoscaler could own it without Argo CD reverting the change.
 
 ## Notes
 
