@@ -23,3 +23,18 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+    # Retry transient sync failures with exponential backoff.
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  # If a HorizontalPodAutoscaler is added later it — not Argo CD — should own
+  # the replica count. Ignoring that field here keeps prod from showing
+  # permanent drift (and self-heal from fighting the autoscaler) once it exists.
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas

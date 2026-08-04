@@ -25,3 +25,11 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+    # Retry transient failures (e.g. API server flaps while child apps are
+    # still being created) with exponential backoff instead of failing hard.
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
