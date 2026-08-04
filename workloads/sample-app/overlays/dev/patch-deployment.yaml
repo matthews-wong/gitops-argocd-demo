@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sample-app
+spec:
+  # Dev: keep it cheap — a single replica and small requests/limits.
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: sample-app
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+          env:
+            - name: APP_ENVIRONMENT
+              value: "dev"

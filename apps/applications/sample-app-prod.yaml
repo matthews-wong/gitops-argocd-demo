@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sample-app-prod
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.io
+spec:
+  project: gitops-argocd-demo
+  source:
+    repoURL: https://github.com/matthews-wong/gitops-argocd-demo.git
+    targetRevision: main
+    # Points at the prod Kustomize overlay.
+    path: workloads/sample-app/overlays/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: sample-app-prod
+  syncPolicy:
+    # Prod keeps self-heal on but leaves prune manual so an accidental
+    # file deletion does not immediately remove running workloads.
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

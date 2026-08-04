@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Prod overlay: deploys the sample app into the sample-app-prod namespace
+# with three replicas, larger resources, and a pinned image tag.
+namespace: sample-app-prod
+
+resources:
+  - ../../base
+
+nameSuffix: -prod
+
+commonLabels:
+  app.kubernetes.io/instance: sample-app-prod
+  environment: prod
+
+patches:
+  - path: patch-deployment.yaml
+
+images:
+  - name: nginxdemos/hello
+    # Pin an immutable tag in prod rather than tracking `latest`.
+    newTag: plain-text

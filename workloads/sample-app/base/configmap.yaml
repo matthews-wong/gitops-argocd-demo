@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sample-app-config
+data:
+  # Consumed by the container via envFrom. Overlays can patch these values
+  # per environment, or add their own ConfigMap generators.
+  APP_ENVIRONMENT: "base"
+  APP_GREETING: "Hello from the GitOps sample app"

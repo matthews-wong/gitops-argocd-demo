@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Dev overlay: deploys the sample app into the sample-app-dev namespace
+# with a single replica, modest resources, and a mutable image tag.
+namespace: sample-app-dev
+
+resources:
+  - ../../base
+
+nameSuffix: -dev
+
+commonLabels:
+  app.kubernetes.io/instance: sample-app-dev
+  environment: dev
+
+patches:
+  - path: patch-deployment.yaml
+
+images:
+  - name: nginxdemos/hello
+    newTag: latest

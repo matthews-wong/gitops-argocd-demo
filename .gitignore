@@ -1,0 +1,19 @@
+# Local Kustomize/kubectl render output
+*.rendered.yaml
+dist/
+out/
+
+# Editor / OS cruft
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Secrets — never commit real cluster credentials or kubeconfigs
+kubeconfig
+*.kubeconfig
+*.pem
+*.key
+.env
+.env.*

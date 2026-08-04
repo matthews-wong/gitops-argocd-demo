@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sample-app-dev
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.io
+spec:
+  project: gitops-argocd-demo
+  source:
+    repoURL: https://github.com/matthews-wong/gitops-argocd-demo.git
+    targetRevision: main
+    # Points at the dev Kustomize overlay. Argo CD renders it the same way
+    # `kubectl kustomize workloads/sample-app/overlays/dev` does locally.
+    path: workloads/sample-app/overlays/dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: sample-app-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sample-app
+spec:
+  # Prod: run multiple replicas and give the container more headroom.
+  replicas: 3
+  template:
+    spec:
+      containers:
+        - name: sample-app
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          env:
+            - name: APP_ENVIRONMENT
+              value: "prod"

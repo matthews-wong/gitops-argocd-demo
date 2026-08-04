@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+  # Keep the root app from being pruned by its own parent (it has none).
+  finalizers:
+    - resources-finalizer.argocd.io
+spec:
+  project: gitops-argocd-demo
+  source:
+    # This is the "app of apps" root: it watches the apps/applications/
+    # directory and creates one Argo CD Application per environment.
+    repoURL: https://github.com/matthews-wong/gitops-argocd-demo.git
+    targetRevision: main
+    path: apps/applications
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

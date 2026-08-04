@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: gitops-argocd-demo
+  namespace: argocd
+spec:
+  description: Scopes the GitOps app-of-apps demo (root + sample-app environments).
+
+  # Only this repo may be used as a source for apps in this project.
+  sourceRepos:
+    - https://github.com/matthews-wong/gitops-argocd-demo.git
+
+  # Restrict deploys to the in-cluster API and the namespaces this demo owns.
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: argocd
+    - server: https://kubernetes.default.svc
+      namespace: sample-app-dev
+    - server: https://kubernetes.default.svc
+      namespace: sample-app-prod
+
+  # This demo only ships namespaced resources, so cluster-scoped creation
+  # is left empty (deny-by-default). Namespaced kinds are unrestricted.
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

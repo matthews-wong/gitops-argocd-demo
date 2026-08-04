@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Shared, environment-agnostic manifests for the sample web service.
+# Overlays under ../overlays/<env> reference this base and layer on
+# environment-specific differences (namespace, replicas, resources, tag).
+resources:
+  - deployment.yaml
+  - service.yaml
+  - configmap.yaml
+
+commonLabels:
+  app.kubernetes.io/name: sample-app
+  app.kubernetes.io/part-of: gitops-argocd-demo
