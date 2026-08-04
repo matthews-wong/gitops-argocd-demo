@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sample-app-staging
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.io
+spec:
+  project: gitops-argocd-demo
+  source:
+    repoURL: https://github.com/matthews-wong/gitops-argocd-demo.git
+    targetRevision: main
+    # Points at the staging Kustomize overlay — the pre-production gate
+    # between dev and prod.
+    path: workloads/sample-app/overlays/staging
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: sample-app-staging
+  syncPolicy:
+    # Staging mirrors dev: fully automated so it always reflects main and
+    # exercises the promotion path before changes reach prod.
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

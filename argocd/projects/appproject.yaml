@@ -17,6 +17,8 @@ spec:
     - server: https://kubernetes.default.svc
       namespace: sample-app-dev
     - server: https://kubernetes.default.svc
+      namespace: sample-app-staging
+    - server: https://kubernetes.default.svc
       namespace: sample-app-prod
 
   # This demo only ships namespaced resources, so cluster-scoped creation

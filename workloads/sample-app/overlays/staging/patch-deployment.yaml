@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sample-app
+spec:
+  # Staging: sized between dev (1 replica) and prod (3) to catch multi-replica
+  # issues before promotion without paying full prod cost.
+  replicas: 2
+  template:
+    spec:
+      containers:
+        - name: sample-app
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 150m
+              memory: 192Mi
+          env:
+            - name: APP_ENVIRONMENT
+              value: "staging"
