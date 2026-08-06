@@ -33,3 +33,11 @@ jobs:
 
       - name: Build prod overlay
         run: kustomize build workloads/sample-app/overlays/prod
+
+      - name: Assert prod ships an HPA targeting the prod Deployment
+        # Guards the prod-only autoscaler: fail loudly if the overlay stops
+        # rendering the HPA or its scaleTargetRef drifts off the Deployment.
+        run: |
+          rendered="$(kustomize build workloads/sample-app/overlays/prod)"
+          echo "$rendered" | grep -q "kind: HorizontalPodAutoscaler"
+          echo "$rendered" | grep -q "name: sample-app-prod"

@@ -90,9 +90,10 @@ gitops-argocd-demo/
 │           │   └── patch-deployment.yaml
 │           └── prod/
 │               ├── kustomization.yaml # namespace, 3 replicas, larger resources, pinned tag
-│               └── patch-deployment.yaml
+│               ├── patch-deployment.yaml
+│               └── hpa.yaml           # prod-only HorizontalPodAutoscaler (CPU)
 │
-├── .github/workflows/validate.yml     # CI: kustomize build every overlay
+├── .github/workflows/validate.yml     # CI: kustomize build every overlay + assert prod HPA
 ├── README.md
 ├── LICENSE
 └── .gitignore
@@ -171,6 +172,7 @@ staging and prod overlays into their namespaces.
 | CPU request   | 25m                         | 50m                               | 100m                              |
 | Memory limit  | 128Mi                       | 192Mi                             | 256Mi                             |
 | Image tag     | `latest` (mutable)          | `plain-text` (pinned)             | `plain-text` (pinned)             |
+| Autoscaling   | none (fixed 1)              | none (fixed 2)                    | HPA 3–6 pods @ 70% CPU            |
 | Auto-prune    | on                          | on                                | off (manual, safer for prod)      |
 | Self-heal     | on                          | on                                | on                                |
 
@@ -179,9 +181,12 @@ same immutable image tag prod will promote, so a release candidate is exercised
 under prod-like conditions before it ships. All other configuration is
 inherited unchanged from `workloads/sample-app/base/`.
 
-Every Application also retries failed syncs with exponential backoff, and prod
-ignores drift on the Deployment's replica count so a future
-HorizontalPodAutoscaler could own it without Argo CD reverting the change.
+Every Application also retries failed syncs with exponential backoff. Prod adds
+a `HorizontalPodAutoscaler` (`overlays/prod/hpa.yaml`) that scales the web tier
+between 3 and 6 pods to keep average CPU near 70%; the prod Application ignores
+drift on the Deployment's replica count so the HPA owns it without Argo CD's
+self-heal reverting each scale event. Dev and staging stay fixed-size, so the
+autoscaler is a prod-only concern layered in by that overlay alone.
 
 ## Notes
 

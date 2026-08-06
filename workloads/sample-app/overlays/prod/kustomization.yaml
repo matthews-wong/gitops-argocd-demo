@@ -7,6 +7,8 @@ namespace: sample-app-prod
 
 resources:
   - ../../base
+  # Prod-only: autoscale the web tier on CPU (dev/staging stay fixed-size).
+  - hpa.yaml
 
 nameSuffix: -prod
 

@@ -1,0 +1,24 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: sample-app
+spec:
+  # Kustomize rewrites this reference to the suffixed name (sample-app-prod)
+  # via its built-in HPA -> Deployment name reference, so the target always
+  # matches the Deployment this overlay renders.
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: sample-app
+  # Never drop below the baseline the prod patch sets (3), and cap the blast
+  # radius / cost at 6. Argo CD ignores /spec/replicas on the Deployment (see
+  # apps/applications/sample-app-prod.yaml) so self-heal does not fight the HPA.
+  minReplicas: 3
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
