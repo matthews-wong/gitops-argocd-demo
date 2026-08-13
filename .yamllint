@@ -1,0 +1,19 @@
+# yamllint configuration for the GitOps manifests in this repo.
+# Tuned for Kubernetes / Argo CD / Kustomize YAML and GitHub Actions.
+extends: default
+
+rules:
+  # Kubernetes and Kustomize manifests are single-document files and are
+  # conventionally written without a leading `---` marker.
+  document-start: disable
+
+  # Allow room for descriptive comments and long image/URL references without
+  # failing the build; flag only as a warning past a generous width.
+  line-length:
+    max: 120
+    level: warning
+
+  # GitHub Actions uses `on:` as a mapping key, which yamllint would otherwise
+  # flag as a truthy value. Keep truthy checking for values, not keys.
+  truthy:
+    check-keys: false

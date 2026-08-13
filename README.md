@@ -40,15 +40,15 @@ the **app-of-apps** pattern to keep things declarative all the way up:
 
 ```mermaid
 flowchart TD
-    Dev["Developer"] -->|git push / PR| Repo["Git repo\n(this repository)"]
-    Repo -->|watches & syncs| Argo["Argo CD\n(in-cluster controller)"]
-    Argo -->|apply| Root["Root Application\n(app of apps)"]
+    Dev["Developer"] -->|git push / PR| Repo["Git repo<br/>(this repository)"]
+    Repo -->|watches & syncs| Argo["Argo CD<br/>(in-cluster controller)"]
+    Argo -->|apply| Root["Root Application<br/>(app of apps)"]
     Root --> AppDev["Application: sample-app-dev"]
     Root --> AppStaging["Application: sample-app-staging"]
     Root --> AppProd["Application: sample-app-prod"]
-    AppDev -->|kustomize build| OverlayDev["overlays/dev\n(base + dev patch)"]
-    AppStaging -->|kustomize build| OverlayStaging["overlays/staging\n(base + staging patch)"]
-    AppProd -->|kustomize build| OverlayProd["overlays/prod\n(base + prod patch)"]
+    AppDev -->|kustomize build| OverlayDev["overlays/dev<br/>(base + dev patch)"]
+    AppStaging -->|kustomize build| OverlayStaging["overlays/staging<br/>(base + staging patch)"]
+    AppProd -->|kustomize build| OverlayProd["overlays/prod<br/>(base + prod patch)"]
     OverlayDev --> NsDev["Namespace: sample-app-dev"]
     OverlayStaging --> NsStaging["Namespace: sample-app-staging"]
     OverlayProd --> NsProd["Namespace: sample-app-prod"]
@@ -93,7 +93,9 @@ gitops-argocd-demo/
 │               ├── patch-deployment.yaml
 │               └── hpa.yaml           # prod-only HorizontalPodAutoscaler (CPU)
 │
-├── .github/workflows/validate.yml     # CI: kustomize build every overlay + assert prod HPA
+├── .github/workflows/validate.yml     # CI: yamllint + kustomize build + kubeconform schema check
+├── .yamllint                          # yamllint rules for the manifests
+├── .gitattributes                     # enforce LF line endings on YAML/Markdown
 ├── README.md
 ├── LICENSE
 └── .gitignore
@@ -145,7 +147,30 @@ kubectl kustomize workloads/sample-app/overlays/prod
 ```
 
 (Or, with the standalone binary: `kustomize build workloads/sample-app/overlays/dev`.)
-CI runs exactly this on every push — see `.github/workflows/validate.yml`.
+
+### Validate everything (what CI runs)
+
+Every push and pull request runs three checks (see
+[`.github/workflows/validate.yml`](.github/workflows/validate.yml)); you can run
+the same ones locally:
+
+```bash
+# 1. Lint every YAML file for well-formedness and consistent style.
+yamllint --strict .
+
+# 2. Render each overlay (base + patches must compose cleanly).
+for env in base overlays/dev overlays/staging overlays/prod; do
+  kustomize build "workloads/sample-app/$env" >/dev/null && echo "OK: $env"
+done
+
+# 3. Validate the rendered manifests against the Kubernetes API schemas.
+kustomize build workloads/sample-app/overlays/prod \
+  | kubeconform -strict -summary -ignore-missing-schemas
+```
+
+Tooling: [`yamllint`](https://yamllint.readthedocs.io/) (config in
+[`.yamllint`](.yamllint)), [`kustomize`](https://kustomize.io/) (or the copy
+built into `kubectl`), and [`kubeconform`](https://github.com/yannh/kubeconform).
 
 ### Deploy via Argo CD
 

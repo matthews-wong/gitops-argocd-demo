@@ -1,0 +1,8 @@
+# Normalize line endings so manifests are byte-identical across platforms and
+# never get committed with CRLF (which would break yamllint's new-lines rule).
+* text=auto eol=lf
+
+# Manifests and configs are always LF.
+*.yaml text eol=lf
+*.yml  text eol=lf
+*.md   text eol=lf

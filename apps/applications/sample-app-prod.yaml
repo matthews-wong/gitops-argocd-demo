@@ -30,9 +30,10 @@ spec:
         duration: 5s
         factor: 2
         maxDuration: 3m
-  # If a HorizontalPodAutoscaler is added later it — not Argo CD — should own
-  # the replica count. Ignoring that field here keeps prod from showing
-  # permanent drift (and self-heal from fighting the autoscaler) once it exists.
+  # The prod overlay ships a HorizontalPodAutoscaler (overlays/prod/hpa.yaml),
+  # so the HPA — not Argo CD — owns the replica count. Ignoring that field here
+  # keeps prod from showing permanent drift and stops self-heal from fighting
+  # the autoscaler on every scale event.
   ignoreDifferences:
     - group: apps
       kind: Deployment

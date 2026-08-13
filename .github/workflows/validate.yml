@@ -1,16 +1,33 @@
 name: validate
 
-# Renders every Kustomize overlay to prove the manifests are buildable.
-# Kept intentionally simple so it cannot fail spuriously: if `kustomize build`
-# succeeds for each overlay, the GitOps sources are valid.
+# Validates the GitOps sources three ways, cheapest first:
+#   1. yamllint  — every YAML file is well-formed and consistently styled.
+#   2. kustomize — every overlay renders (base + patches compose cleanly).
+#   3. kubeconform — the rendered manifests match the Kubernetes API schemas.
+# Kept deterministic so it fails only on real problems, never spuriously.
 on:
   push:
     branches: [main]
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  kustomize-build:
+  yaml-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install yamllint
+        run: pipx install yamllint
+
+      - name: Lint YAML
+        run: yamllint --strict .
+
+  kustomize-validate:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -18,21 +35,40 @@ jobs:
 
       - name: Install kustomize
         run: |
-          curl -sSfL "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          repo=kubernetes-sigs/kustomize
+          curl -sSfL "https://raw.githubusercontent.com/${repo}/master/hack/install_kustomize.sh" | bash
           sudo mv kustomize /usr/local/bin/
           kustomize version
 
-      - name: Build base
-        run: kustomize build workloads/sample-app/base
+      - name: Install kubeconform
+        run: |
+          version=v0.6.7
+          base="https://github.com/yannh/kubeconform/releases/download/${version}"
+          curl -sSfL "${base}/kubeconform-linux-amd64.tar.gz" | tar -xz kubeconform
+          sudo mv kubeconform /usr/local/bin/
+          kubeconform -v
 
-      - name: Build dev overlay
-        run: kustomize build workloads/sample-app/overlays/dev
+      - name: Build and schema-validate every overlay
+        # Render each overlay and pipe it into kubeconform. `-strict` rejects
+        # unknown fields; `-ignore-missing-schemas` tolerates CRDs (none here,
+        # but keeps the step honest if one is added later).
+        run: |
+          for env in base overlays/dev overlays/staging overlays/prod; do
+            echo "::group::validate workloads/sample-app/$env"
+            kustomize build "workloads/sample-app/$env" \
+              | kubeconform -strict -summary -ignore-missing-schemas \
+                  -kubernetes-version 1.29.0
+            echo "::endgroup::"
+          done
 
-      - name: Build staging overlay
-        run: kustomize build workloads/sample-app/overlays/staging
-
-      - name: Build prod overlay
-        run: kustomize build workloads/sample-app/overlays/prod
+      - name: Schema-validate the Argo CD manifests
+        # Application / AppProject are CRDs, so their schemas are "missing" to
+        # kubeconform — validate structure and skip the unknown kinds.
+        run: |
+          kubeconform -summary -ignore-missing-schemas \
+            apps/argocd/root-app.yaml \
+            apps/applications \
+            argocd/projects/appproject.yaml
 
       - name: Assert prod ships an HPA targeting the prod Deployment
         # Guards the prod-only autoscaler: fail loudly if the overlay stops
